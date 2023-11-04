@@ -1,0 +1,9 @@
+*.pyc
+.cache
+__pycache__/
+*.log
+*.pdf
+output/
+test/
+log/
+data/

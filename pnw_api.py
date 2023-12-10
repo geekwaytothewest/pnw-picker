@@ -3,8 +3,8 @@ import json
 
 def get_auth():
     """Yeah, these don't belong here."""
-    conn = http.client.HTTPSConnection("")
-    payload = "{}"
+    conn = http.client.HTTPSConnection("auth_url_goes_here")
+    payload = "{\"client_id\":\"client_id_goes_here\",\"client_secret\":\"client_secret_goes_here\",\"audience\":\"audience_goes_here\",\"grant_type\":\"client_credentials\",\"email\":\"admin_email_goes_here\"}"
     headers = { 'content-type': "application/json" }
     conn.request("POST", "/oauth/token", payload, headers)
 
@@ -17,7 +17,7 @@ def get_auth():
 def get_api_resource(access_token, resource, url):
     """5/4/19: Now uses HTTPS. Base endpoint was /pnw/service/api, now just /."""
     # sub_endpoint = '/copycollections/2'
-    sub_endpoint = '/'
+    sub_endpoint = '/api/legacy/org/org_id_goes_here/con/con_id_goes_here/'
     conn = http.client.HTTPSConnection(url)
     headers = { 'authorization': "Bearer " + access_token }
     conn.request("GET", sub_endpoint + resource, headers=headers)

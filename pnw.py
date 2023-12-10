@@ -7,7 +7,7 @@ import csv
 import labels
 from reportlab.graphics import shapes
 from reportlab.pdfbase.pdfmetrics import stringWidth
-from reportlab.lib import colors 
+from reportlab.lib import colors
 
 logger = logging.getLogger(__name__)
 
@@ -25,10 +25,10 @@ class Game(object):
         self.game_id = game_id
         self.game_name = game_name
         self.copies = copies if copies is not None else list()
-    
+
     def num_copies(self):
         return len(self.copies)
-    
+
     def copy_ids(self):
         return [c.copy_id for c in self.copies]
 
@@ -43,7 +43,7 @@ class Copy(object):
         self.copy_id = copy_id
         self.allow_winning = allow_winning
         self.winner = None
-    
+
     def tsv_row(self):
         return [self.game_id, self.copy_id, self.allow_winning, self.winner]
 
@@ -56,7 +56,7 @@ class GameCheckout(object):
             - duration: the amount of time checked out for this checkout
             - game.game_id and game.game_name: ID should be exactly the same as library/P&W ID, and name is used for convenience
             - players: a list of Player objects
-    
+
     """
     def __init__(self, play_json=None):
         """Input: play_json should have five keys at minimum: CheckoutID, GameID, GaneName, Checkout, and Players.
@@ -99,13 +99,13 @@ class GameCheckout(object):
         """ Return N rows suitable for TSV output, N=#players. """
         output_rows = list()
         for p in self.players:
-            output_rows.append([self.checkout_id,self.game.game_name, self.game.game_id, p.player_name, p.player_id, 
+            output_rows.append([self.checkout_id,self.game.game_name, self.game.game_id, p.player_name, p.player_id,
                                 p.wants_to_win, p.rating, self.time_out, self.time_in, self.duration/60.0])
         return output_rows
 
 class Player(object):
     """A single player of a single play of a game (non-unique)."""
-    
+
     def __init__(self, player_id=None, player_name=None, wants_to_win=True, rating=None):
         self.player_id = str(player_id)
         self.player_name = player_name
@@ -115,14 +115,14 @@ class Player(object):
     def __eq__(self,other):
         """Returns true if the IDs are the same. Beware of string comparison of ints."""
         return self.player_id==other.player_id
-    
+
     def __neq__(self,other):
         """Returns false if the IDs are the same. Beware of string comparison of ints."""
         return self.player_id!=other.player_id
 
     def __str__(self):
         return f"{self.player_id}, {self.player_name}"
-    
+
     def __hash__(self):
         return hash(self.player_id)
 
@@ -171,8 +171,8 @@ def parse_games_json(filename):
                 The following is not used:
                 - Copies.IsCheckedOut: Boolean - Whether the copy is currently checked out or not
                 - Copies.Title: redundant
-                - Collection: Allows games to be moved from Library to Play and Win 
-                    - AllowWinning: true if the whole collection is meant to be winnable                
+                - Collection: Allows games to be moved from Library to Play and Win
+                    - AllowWinning: true if the whole collection is meant to be winnable
                 - Copies.CurrentCheckout: A Checkout object if the copy is checked out, else null
                 - Copies.Collection.ID and Collection.Name and Collection.Color
                 - Copies.Game:
@@ -186,9 +186,9 @@ def parse_games_json(filename):
 
     with open(filename,'r',newline='') as f:
         m = json.load(f)
-    
+
     m = m['Result']
-    
+
     all_games = list()
     for g in m['Games']:
         game_id = int(g['ID'])
@@ -203,24 +203,24 @@ def parse_games_json(filename):
     return all_games
 
 def filter_library_games(all_games):
-    """GIVEN a list of Game objects, Return a list of Game objects that only have winnable Copy objects. 
-        If a game has winnable and non-winnable copies, the returned list will only have the winnable copies. 
+    """GIVEN a list of Game objects, Return a list of Game objects that only have winnable Copy objects.
+        If a game has winnable and non-winnable copies, the returned list will only have the winnable copies.
         If a game has only non-winnable copies, it will not be present in the returned list.
-    """    
+    """
     winnable_games = list()
 
     for g in all_games:
         winnable_copies = [c for c in g.copies if c.allow_winning==True]
         if len(winnable_copies)>0:
             winnable_games.append(Game(game_id=g.game_id,game_name=g.game_name, copies=winnable_copies))
-    
+
     return winnable_games
 
 def parse_plays_json(filename):
     """Deserialize a list of Checkouts input from JSON.
         JSON FORMAT:
             api/plays
-        USED: 
+        USED:
             - ID: the play's ID
             - CheckoutID: the checkout's ID
             - GameID: the ID of the Game that was played (This is NOT the individual copy ID)
@@ -233,17 +233,17 @@ def parse_plays_json(filename):
                 - Rating: parsed but not currently used
 
         RETURNS:
-            A list of all plays as GameCheckout objects.    
+            A list of all plays as GameCheckout objects.
     """
     with open(filename,'r',newline='') as f:
         m = json.load(f)
-    
+
     m = m['Result']
     all_plays = [GameCheckout(play_json=play) for play in m['Plays']]
     return all_plays
 
 def filter_plays(all_plays, awardable_games_by_ID, min_duration=None, max_duration=None):
-    """Given a list of plays and an OrderedDict of awardable games by ID, remove: 
+    """Given a list of plays and an OrderedDict of awardable games by ID, remove:
         - any plays of games not awardable
         - any play durations outside of the min and max
         - any players who do not want to win that game copy
@@ -255,7 +255,7 @@ def filter_plays(all_plays, awardable_games_by_ID, min_duration=None, max_durati
     filtered_plays = defaultdict(list)
     removed_plays = defaultdict(list)
     num_not_want_to_win = 0
-    
+
     for p in all_plays:
         if p.game.game_id not in awardable_games_by_ID:
             removed_plays['not_awardable'].append(p)
@@ -287,7 +287,7 @@ def parse_ineligible_players(ineligible_players_fn):
         r = csv.reader(f, delimiter='\t')
         for row in r:
             ineligible_players.append(Player(player_id=row[0].strip(),player_name=row[1].strip()))
-    
+
     logger.info(f"Found {len(ineligible_players)} ineligible players in file {ineligible_players_fn}")
     # logger.debug(json.dumps(ineligible_players,cls=CustomJSONEncoder))
     return ineligible_players
@@ -296,13 +296,13 @@ def output_winners(wins,out_fn):
     """TSV output of winners to the specified file.
         ARGUMENTS:
             wins - a list of Game objects, each with a list of Players who won
-            out_fn - the TSV file        
+            out_fn - the TSV file
     """
     with open(out_fn,'w',newline='', encoding="utf-8") as f:
         writer = csv.writer(f,delimiter='\t')
         writer.writerow(Win._header_row)
         for w in wins:
-            try: 
+            try:
                 writer.writerow(w.list_output())
             except UnicodeEncodeError as err:
                 logger.warning(f"Exception {err} when giving away {w.game.game_name} ({w.copy_id}), check results...")
@@ -313,9 +313,9 @@ def output_winners_labels(wins,out_fn):
     """label-formatted output of winners to the specified file.
         ARGUMENTS:
             wins - a list of Game objects, each with a list of Players who won
-            out_fn - the labels file        
+            out_fn - the labels file
     """
-    # This uses Avery 6460 labels on 8.5"x11" (216mm x 279mm) sheets, with 3 columns of labels. 
+    # This uses Avery 6460 labels on 8.5"x11" (216mm x 279mm) sheets, with 3 columns of labels.
     # Each label is 1"x2-5/8" (25.4mm x 66.675mm) with a 2mm rounded corner. The margins are
     # automatically calculated.
     pw = 216   # actually 215.9
@@ -327,8 +327,8 @@ def output_winners_labels(wins,out_fn):
     lh = 25     # actually 25.4
     rows = 10
     cols = 3
-    specs = labels.Specification(pw, ph, cols, rows, lw, lh, corner_radius=corner, 
-        left_margin=side_margins, right_margin=side_margins, top_margin=front_margins, 
+    specs = labels.Specification(pw, ph, cols, rows, lw, lh, corner_radius=corner,
+        left_margin=side_margins, right_margin=side_margins, top_margin=front_margins,
         bottom_margin=front_margins)
 
     # Measure the width of the name and shrink the font size until it fits.
@@ -360,7 +360,7 @@ def output_winners_labels(wins,out_fn):
             fillColor=colors.blue, fontSize=winner_size))
 
         # Game on bottom line, never bigger than winner.
-        label.add(shapes.String(lr_margins, game_pos, text[1], fontName=font, 
+        label.add(shapes.String(lr_margins, game_pos, text[1], fontName=font,
             fontSize=game_size))
 
     # Create the sheet
@@ -375,7 +375,7 @@ def output_winners_labels(wins,out_fn):
 
 def output_problem_file(problem_fn, problem_plays):
     """Output a TSV file of all plays for all games that have unawarded copies or other problems."""
-    
+
     headers = ['CheckoutID','GameName','GameID','PlayerName','PlayerID','WantsToWin','Rating','TimeOut','TimeIn','Duration(min)']
     tsv_rows = list()
     for play in problem_plays:
@@ -388,7 +388,7 @@ def output_problem_file(problem_fn, problem_plays):
 
 def setup_logger(app_name):
     """Creates debug and warning files based on the input app_name, in the log directory.
-        By default files are appended, not overwritten. 
+        By default files are appended, not overwritten.
     """
     fn_debug = 'log/'+app_name+'.debug.log'
     fn_warning = 'log/'+app_name+'.warning.log'

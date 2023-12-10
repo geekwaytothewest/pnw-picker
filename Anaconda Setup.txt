@@ -6,3 +6,10 @@ conda config --set auto_activate_base False
 conda create -n pnw python=3.12
 conda activate pnw
 pip install pylabels reportlab requests gooey
+
+Mac:
+
+Download and run -> https://repo.anaconda.com/archive/Anaconda3-2023.09-0-MacOSX-arm64.pkg
+Use Anacanda Navigator to create a pnw environment using python 3.12
+Open an environent terminal
+pip install pylabels reportlab requests gooey

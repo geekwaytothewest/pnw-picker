@@ -17,7 +17,7 @@ def get_auth():
 def get_api_resource(access_token, resource, url):
     """5/4/19: Now uses HTTPS. Base endpoint was /pnw/service/api, now just /."""
     # sub_endpoint = '/copycollections/2'
-    sub_endpoint = '/api/legacy/org/org_id_goes_here/con/con_id_goes_here/'
+    sub_endpoint = '/api/legacy/org/org_id_goes_here/con/con_id_goes_here/coll/coll_id_goes_here'
     conn = http.client.HTTPSConnection(url)
     headers = { 'authorization': "Bearer " + access_token }
     conn.request("GET", sub_endpoint + resource, headers=headers)

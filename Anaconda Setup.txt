@@ -1,9 +1,18 @@
-Linux:
+Ubuntu Linux:
 
 curl -O https://repo.anaconda.com/archive/Anaconda3-2023.09-0-Linux-x86_64.sh
 bash Anaconda3-2023.09-0-Linux-x86_64.sh
 conda config --set auto_activate_base False
 conda create -n pnw python=3.12
+conda activate pnw
+pip install pylabels reportlab requests gooey
+
+Arch Linux:
+
+yay -S python-conda
+conda config --set auto_activate_base False
+conda init zsh
+conda env create -f environment.yaml
 conda activate pnw
 pip install pylabels reportlab requests gooey
 
@@ -13,3 +22,7 @@ Download and run -> https://repo.anaconda.com/archive/Anaconda3-2023.09-0-MacOSX
 Use Anacanda Navigator to create a pnw environment using python 3.12
 Open an environent terminal
 pip install pylabels reportlab requests gooey
+
+Once installed:
+
+Modify pnw_api.py then run -> python pnw_picker

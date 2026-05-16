@@ -33,8 +33,9 @@ hoarding_pairs AS (
       AND co1."checkIn"  > co2."checkOut"
 )
 SELECT
-    player_names                          AS hoarding_group,
-    COUNT(*)                              AS simultaneous_checkout_pairs,
+    player_names                            AS hoarding_group,
+    group_key                               AS attendee_ids,
+    COUNT(*)                                AS simultaneous_checkout_pairs,
     ROUND(SUM(overlap_minutes)::numeric, 1) AS total_overlap_minutes
 FROM hoarding_pairs
 GROUP BY group_key, player_names

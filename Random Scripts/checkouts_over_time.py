@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
-"""Graph the number of board games checked out at any given time.
+"""Graph board game checkouts and players in play at any given time.
 
 Reads a CSV of checkout/checkin times (given in UTC), converts them to
-America/Chicago, and plots a step line of concurrent checkouts.
+America/Chicago, and plots two step lines:
+  * games checked out (each row counts as 1), on the left y-axis
+  * players in play (each row weighted by its player count), on the right
+    y-axis
 
 Rows with a blank/missing checkin are ignored (treated as bad data), per
-the chosen behavior.
+the chosen behavior. If the count column is absent only the games line is
+drawn.
 
 Usage:
     python3 checkouts_over_time.py library.csv
@@ -64,6 +68,11 @@ def main():
         help="Column name for checkin time (default: checkIn)",
     )
     parser.add_argument(
+        "--count-col",
+        default="count",
+        help="Column name for player count (default: count)",
+    )
+    parser.add_argument(
         "--time-format",
         default=None,
         help="Optional strptime format if timestamps are not ISO-8601",
@@ -82,7 +91,9 @@ def main():
 
     target_tz = ZoneInfo(args.tz)
 
-    events = []  # (timestamp, delta): +1 at checkout, -1 at checkin
+    # Each event: (timestamp, game_delta, player_delta).
+    # checkout -> (+1, +count); checkin -> (-1, -count).
+    events = []
     total_rows = 0
     skipped_no_checkin = 0
     skipped_bad = 0
@@ -97,6 +108,14 @@ def main():
                     f"Column {col!r} not found. Available columns: "
                     f"{', '.join(reader.fieldnames)}"
                 )
+
+        # The count column is optional; without it we only plot the games line.
+        has_count = args.count_col in reader.fieldnames
+        if not has_count:
+            print(
+                f"Note: column {args.count_col!r} not found; plotting games only.",
+                file=sys.stderr,
+            )
 
         for row in reader:
             total_rows += 1
@@ -116,8 +135,22 @@ def main():
                 skipped_no_checkin += 1
                 continue
 
-            events.append((out, 1))
-            events.append((cin, -1))
+            players = 0
+            if has_count:
+                raw_count = (row[args.count_col] or "").strip()
+                try:
+                    players = int(float(raw_count)) if raw_count else 0
+                except ValueError:
+                    skipped_bad += 1
+                    print(
+                        f"Skipping row {total_rows}: bad player count "
+                        f"{raw_count!r}",
+                        file=sys.stderr,
+                    )
+                    continue
+
+            events.append((out, 1, players))
+            events.append((cin, -1, -players))
 
     if not events:
         sys.exit("No usable checkout/checkin pairs found.")
@@ -127,41 +160,82 @@ def main():
     events.sort(key=lambda e: (e[0], e[1]))
 
     times = []
-    counts = []
-    current = 0
-    for ts, delta in events:
-        current += delta
+    game_counts = []
+    player_counts = []
+    games_now = 0
+    players_now = 0
+    for ts, g_delta, p_delta in events:
+        games_now += g_delta
+        players_now += p_delta
         times.append(ts)
-        counts.append(current)
+        game_counts.append(games_now)
+        player_counts.append(players_now)
 
-    peak = max(counts)
-    peak_time = times[counts.index(peak)]
+    games_peak = max(game_counts)
+    games_peak_time = times[game_counts.index(games_peak)]
+    players_peak = max(player_counts)
+    players_peak_time = times[player_counts.index(players_peak)]
+
+    games_color = "tab:blue"
+    players_color = "tab:orange"
 
     fig, ax = plt.subplots(figsize=(13, 6))
-    ax.step(times, counts, where="post", linewidth=1.5)
-    ax.fill_between(times, counts, step="post", alpha=0.15)
 
-    ax.set_title("Games checked out over time")
+    (games_line,) = ax.step(
+        times, game_counts, where="post", linewidth=1.5,
+        color=games_color, label="Games checked out",
+    )
+    ax.fill_between(
+        times, game_counts, step="post", alpha=0.12, color=games_color
+    )
     ax.set_xlabel(f"Time ({args.tz})")
-    ax.set_ylabel("Games checked out")
+    ax.set_ylabel("Games checked out", color=games_color)
+    ax.tick_params(axis="y", labelcolor=games_color)
     ax.set_ylim(bottom=0)
     ax.grid(True, alpha=0.3)
-
+    ax.set_title("Games checked out and players in play over time")
     ax.xaxis.set_major_formatter(
         mdates.DateFormatter("%a %m/%d %H:%M", tz=target_tz)
     )
-    fig.autofmt_xdate()
 
+    lines = [games_line]
     ax.annotate(
-        f"peak: {peak}",
-        xy=(peak_time, peak),
-        xytext=(0, 12),
+        f"games peak: {games_peak}",
+        xy=(games_peak_time, games_peak),
+        xytext=(-60, 10),
         textcoords="offset points",
-        ha="center",
+        ha="right",
         fontsize=9,
         fontweight="bold",
+        color=games_color,
+        arrowprops=dict(arrowstyle="-", color=games_color, alpha=0.5),
     )
 
+    if has_count:
+        ax2 = ax.twinx()
+        (players_line,) = ax2.step(
+            times, player_counts, where="post", linewidth=1.5,
+            color=players_color, label="Players in play",
+        )
+        ax2.set_ylabel("Players in play", color=players_color)
+        ax2.tick_params(axis="y", labelcolor=players_color)
+        ax2.set_ylim(bottom=0)
+        lines.append(players_line)
+        ax2.annotate(
+            f"players peak: {players_peak}",
+            xy=(players_peak_time, players_peak),
+            xytext=(60, 10),
+            textcoords="offset points",
+            ha="left",
+            fontsize=9,
+            fontweight="bold",
+            color=players_color,
+            arrowprops=dict(arrowstyle="-", color=players_color, alpha=0.5),
+        )
+
+    ax.legend(lines, [ln.get_label() for ln in lines], loc="upper left")
+
+    fig.autofmt_xdate()
     fig.tight_layout()
 
     print(
@@ -169,7 +243,15 @@ def main():
         f"skipped (no checkin): {skipped_no_checkin} | "
         f"skipped (bad/no checkout): {skipped_bad}"
     )
-    print(f"Peak concurrent checkouts: {peak} at {peak_time:%Y-%m-%d %H:%M %Z}")
+    print(
+        f"Peak concurrent checkouts: {games_peak} at "
+        f"{games_peak_time:%Y-%m-%d %H:%M %Z}"
+    )
+    if has_count:
+        print(
+            f"Peak concurrent players:   {players_peak} at "
+            f"{players_peak_time:%Y-%m-%d %H:%M %Z}"
+        )
 
     if args.save:
         fig.savefig(args.save, dpi=150)

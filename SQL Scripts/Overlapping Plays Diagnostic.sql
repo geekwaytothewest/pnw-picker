@@ -10,5 +10,5 @@ SELECT
 FROM "Player" p
 JOIN "CheckOut" co ON p."checkOutId" = co.id
 LEFT JOIN "Copy" copy ON co."copyId" = copy.id
-WHERE p."attendeeId" = 9547
+WHERE p."attendeeId" = 9905
 ORDER BY co."checkOut";

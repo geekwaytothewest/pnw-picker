@@ -20,6 +20,8 @@ WITH overlapping_pairs AS (
       AND co2."checkIn" IS NOT NULL
       AND co1."checkOut" < co2."checkIn"
       AND co1."checkIn"  > co2."checkOut"
+      AND DATE(co1."checkOut" AT TIME ZONE 'America/Chicago') = DATE(co1."checkIn" AT TIME ZONE 'America/Chicago')
+      AND DATE(co2."checkOut" AT TIME ZONE 'America/Chicago') = DATE(co2."checkIn" AT TIME ZONE 'America/Chicago')
 ),
 shared_players AS (
     -- For each overlapping pair, find players who appear on BOTH checkouts
@@ -28,9 +30,11 @@ shared_players AS (
         op.checkout2_id,
         op.overlap_minutes,
         p1."attendeeId",
-        a."badgeName"
+        a."badgeName",
+        a."badgeNumber"
     FROM overlapping_pairs op
     JOIN "Player" p1 ON p1."checkOutId" = op.checkout1_id
+                    AND p1."wantToWin" = true
     JOIN "Player" p2 ON p2."checkOutId" = op.checkout2_id
                     AND p2."attendeeId" = p1."attendeeId"
     JOIN "Attendee" a ON p1."attendeeId" = a.id
@@ -42,17 +46,19 @@ pair_groups AS (
         checkout1_id,
         checkout2_id,
         overlap_minutes,
-        STRING_AGG(sp."attendeeId"::text, ',' ORDER BY sp."attendeeId") AS group_key,
-        STRING_AGG(sp."badgeName",        ', ' ORDER BY sp."badgeName") AS player_names
+        STRING_AGG(sp."attendeeId"::text, ',' ORDER BY sp."attendeeId")  AS group_key,
+        STRING_AGG(sp."badgeName",        ', ' ORDER BY sp."badgeName")  AS player_names,
+        STRING_AGG(sp."badgeNumber",      ', ' ORDER BY sp."badgeName")  AS badge_numbers
     FROM shared_players sp
     GROUP BY checkout1_id, checkout2_id, overlap_minutes
     HAVING COUNT(*) >= 2
 )
 SELECT
     player_names                              AS hoarding_group,
+    badge_numbers                             AS badge_numbers,
     group_key                                 AS attendee_ids,
     COUNT(*)                                  AS simultaneous_checkout_pairs,
     ROUND(SUM(overlap_minutes)::numeric, 1)   AS total_overlap_minutes
 FROM pair_groups
-GROUP BY group_key, player_names
+GROUP BY group_key, player_names, badge_numbers
 ORDER BY total_overlap_minutes DESC;

@@ -18,6 +18,8 @@ WITH overlapping_pairs AS (
       AND co2."checkIn" IS NOT NULL
       AND co1."checkOut" < co2."checkIn"
       AND co1."checkIn"  > co2."checkOut"
+      AND DATE(co1."checkOut" AT TIME ZONE 'America/Chicago') = DATE(co1."checkIn" AT TIME ZONE 'America/Chicago')
+      AND DATE(co2."checkOut" AT TIME ZONE 'America/Chicago') = DATE(co2."checkIn" AT TIME ZONE 'America/Chicago')
 ),
 shared_players AS (
     SELECT
@@ -27,6 +29,7 @@ shared_players AS (
         p1."attendeeId"
     FROM overlapping_pairs op
     JOIN "Player" p1 ON p1."checkOutId" = op.checkout1_id
+                    AND p1."wantToWin" = true
     JOIN "Player" p2 ON p2."checkOutId" = op.checkout2_id
                     AND p2."attendeeId" = p1."attendeeId"
 ),
@@ -42,12 +45,13 @@ qualifying_pairs AS (
     )
 )
 SELECT
-    a."badgeName"                             AS badge_name,
-    a."legalName"                             AS legal_name,
+    a."badgeName"                              AS badge_name,
+    a."badgeNumber"                            AS badge_number,
+    a."legalName"                              AS legal_name,
     qp."attendeeId",
-    COUNT(*)                                  AS hoarding_pair_appearances,
+    COUNT(*)                                   AS hoarding_pair_appearances,
     ROUND(SUM(qp.overlap_minutes)::numeric, 1) AS total_overlap_minutes
 FROM qualifying_pairs qp
 JOIN "Attendee" a ON qp."attendeeId" = a.id
-GROUP BY a."badgeName", a."legalName", qp."attendeeId"
+GROUP BY a."badgeName", a."badgeNumber", a."legalName", qp."attendeeId"
 ORDER BY total_overlap_minutes DESC;

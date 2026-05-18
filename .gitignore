@@ -3,7 +3,9 @@
 __pycache__/
 *.log
 *.pdf
+*.tsv
 output/
 test/
 log/
 data/
+*.json

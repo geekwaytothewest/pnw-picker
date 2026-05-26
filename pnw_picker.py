@@ -76,7 +76,7 @@ def pick_all_winners(ineligible_players_fn, out_fn_prefix, suffix=None,
     if local_source is False:
         # hard code the URL for now
         # will output to files, then parse those files
-        url = 'nonprod.ruleslawyer.geekway.com'
+        url = 'library.geekway.com'
         logger.info(f"Attempting api retrieval from {url}...")
         all_game_copies_source = ".".join(['data/games',suffix,'json'])
         all_plays_source = ".".join(['data/plays',suffix,'json'])

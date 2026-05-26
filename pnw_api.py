@@ -1,10 +1,28 @@
 import http.client
 import json
+import os
 
 def get_auth():
-    """Yeah, these don't belong here."""
-    conn = http.client.HTTPSConnection("auth_url_goes_here")
-    payload = "{\"client_id\":\"client_id_goes_here\",\"client_secret\":\"client_secret_goes_here\",\"audience\":\"audience_goes_here\",\"grant_type\":\"client_credentials\",\"email\":\"admin_email_goes_here\"}"
+    """Authenticate to Auth0 via the client_credentials grant.
+
+    Credentials are read from the environment so they never live in source:
+      AUTH0_CLIENT_ID, AUTH0_CLIENT_SECRET
+    """
+    client_id = os.environ.get("AUTH0_CLIENT_ID")
+    client_secret = os.environ.get("AUTH0_CLIENT_SECRET")
+    if not client_id or not client_secret:
+        raise RuntimeError(
+            "Missing AUTH0_CLIENT_ID and/or AUTH0_CLIENT_SECRET environment variables."
+        )
+
+    conn = http.client.HTTPSConnection("geekway.auth0.com")
+    payload = json.dumps({
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "audience": "https://api.ruleslawyer.geekway.com",
+        "grant_type": "client_credentials",
+        "email": "mattie@mattie.lgbt",
+    })
     headers = { 'content-type': "application/json" }
     conn.request("POST", "/oauth/token", payload, headers)
 
@@ -17,7 +35,8 @@ def get_auth():
 def get_api_resource(access_token, resource, url):
     """5/4/19: Now uses HTTPS. Base endpoint was /pnw/service/api, now just /."""
     # sub_endpoint = '/copycollections/2'
-    sub_endpoint = '/api/legacy/org/org_id_goes_here/con/con_id_goes_here/coll/coll_id_goes_here'
+    # sub_endpoint = '/api/legacy/org/1/con/273/coll/16/' #pnw
+    sub_endpoint = '/api/legacy/org/1/con/273/coll/17/' #playtest
     conn = http.client.HTTPSConnection(url)
     headers = { 'authorization': "Bearer " + access_token }
     conn.request("GET", sub_endpoint + resource, headers=headers)

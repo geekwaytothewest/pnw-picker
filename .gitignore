@@ -10,3 +10,8 @@ log/
 data/
 *.json
 *.csv
+
+# Local secrets / environment
+.env
+.env.*
+!.env.example
